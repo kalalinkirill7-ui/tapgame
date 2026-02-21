@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Tap Game — чистая версия</title>
+<style>
+  :root{
+    --bg:#f7f6fb;
+    --card:#ffffff;
+    --accent1:#ffb07b;
+    --accent2:#ff7a59;
+    --muted:#6b6b6b;
+    --danger:#e74c3c;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#eefaf6);color:#111; -webkit-text-size-adjust:100%;}
+  .wrap{max-width:820px;margin:0 auto;padding:18px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .tabs{display:flex;gap:10px;}
+  .tab{padding:8px 16px;border-radius:999px;background:#e6e6e6;border:none;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .tab.active{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff;box-shadow:0 8px 24px rgba(255,122,89,0.14)}
+  .card{width:100%;max-width:640px;background:var(--card);padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(16,24,40,0.06)}
+  #circle{width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,#ffd3b6,#ffb385);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:34px;user-select:none;margin:18px auto;position:relative;transition:transform .12s;touch-action:manipulation;-webkit-user-select:none;cursor:pointer;z-index:5}
+  .coinPop{position:absolute;font-weight:800;color:#8b4513;pointer-events:none;user-select:none;transform:translate(-50%,-50%);transition:transform .6s ease,opacity .6s ease}
+  .top-title{font-weight:800;margin-top:6px;text-align:center}
+  .top-list{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+  .top-item{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px;border-radius:8px;background:rgba(0,0,0,0.02);font-weight:700}
+  .shop-btn{width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff;font-weight:800;font-size:16px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .shop-btn:active{transform:scale(.995)}
+  .msg{min-height:20px;color:var(--danger);font-weight:700;margin-top:8px;text-align:center}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+  .small{padding:8px 10px;border-radius:10px;border:none;background:#fff;font-weight:700;cursor:pointer;touch-action:manipulation}
+  textarea{width:100%;height:80px;border-radius:8px;padding:8px;border:1px solid #eee;margin-top:10px;resize:none}
+  .note{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--accent2);color:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,0.12);z-index:9999}
+  @media (max-width:420px){ #circle{width:180px;height:180px;font-size:28px} .shop-btn{font-size:15px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabs" role="tablist" aria-label="Tabs">
+    <button id="tabGame" class="tab active" type="button" aria-controls="gameCard">Игра</button>
+    <button id="tabShop" class="tab" type="button" aria-controls="shopCard">Магазин</button>
+    <button id="tabExport" class="tab" type="button" aria-controls="exportCard">Экспорт</button>
+  </div>
+
+  <div id="gameCard" class="card" role="region" aria-labelledby="tabGame" style="text-align:center">
+    <div id="circle" aria-label="Кнопка тап" role="button">0 ₽</div>
+    <div class="top-title">Локальный рейтинг</div>
+    <div id="localTop" class="top-list" aria-live="polite"></div>
+    <div class="note">Рейтинг хранится на этом устройстве. Экспорт/импорт внизу.</div>
+  </div>
+
+  <div id="shopCard" class="card" role="region" aria-labelledby="tabShop" style="display:none">
+    <div style="font-weight:800;margin-bottom:8px">Магазин</div>
+    <button id="buyTap" class="shop-btn" type="button">+1 к тапу (<span id="priceTap">100</span> ₽)</button>
+    <button id="buyPassive" class="shop-btn" type="button" style="margin-top:10px">Пассивный доход +0.5 ₽/мин (<span id="pricePassive">200</span> ₽)</button>
+    <div id="shopMsg" class="msg" aria-live="polite"></div>
+    <div class="note">Цены растут ×1.2 после каждой покупки.</div>
+  </div>
+
+  <div id="exportCard" class="card" role="region" aria-labelledby="tabExport" style="display:none">
+    <div style="font-weight:800">Экспорт / Импорт локального рейтинга</div>
+    <div class="controls" style="margin-top:10px">
+      <button id="exportLink" class="small" type="button">Скопировать ссылку экспорта</button>
+      <button id="copyJSON" class="small" type="button">Скопировать JSON</button>
+      <button id="clearLocal" class="small" type="button">Очистить локальный рейтинг</button>
+    </div>
+    <textarea id="importArea" placeholder="Вставьте JSON или ссылку с #export=..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="importBtn" class="small" type="button">Импорт / Слить</button>
+      <button id="pasteBtn" class="small" type="button">Вставить из буфера</button>
+    </div>
+    <div class="note">Экспорт создаёт ссылку, которую можно отправить друзьям — они импортируют и объединят рейтинг (берётся максимум по имени).</div>
+  </div>
+</div>
+
+<script>
+/* ========= SETTINGS & STATE ========= */
+const STATE = {
+  coins: parseFloat(localStorage.getItem('tg_coins')) || 0,
+  tapPower: parseFloat(localStorage.getItem('tg_tapPower')) || 1,
+  passiveRate: parseFloat(localStorage.getItem('tg_passiveRate')) || 0,
+  priceTap: parseFloat(localStorage.getItem('tg_priceTap')) || 100,
+  pricePassive: parseFloat(localStorage.getItem('tg_pricePassive')) || 200,
+  localTop: JSON.parse(localStorage.getItem('tg_localTop')) || []
+};
+
+/* player name */
+let playerName = localStorage.getItem('tg_name') || null;
+if(!playerName){
+  playerName = prompt('Введите имя (будет в рейтинге):') || 'Игрок';
+  localStorage.setItem('tg_name', playerName);
+}
+
+/* ========= ELEMENTS ========= */
+const circle = document.getElementById('circle');
+const localTopDiv = document.getElementById('localTop');
+const priceTapSpan = document.getElementById('priceTap');
+const pricePassiveSpan = document.getElementById('pricePassive');
+const buyTapBtn = document.getElementById('buyTap');
+const buyPassiveBtn = document.getElementById('buyPassive');
+const shopMsg = document.getElementById('shopMsg');
+
+const tabGame = document.getElementById('tabGame');
+const tabShop = document.getElementById('tabShop');
+const tabExport = document.getElementById('tabExport');
+const gameCard = document.getElementById('gameCard');
+const shopCard = document.getElementById('shopCard');
+const exportCard = document.getElementById('exportCard');
+
+const exportLinkBtn = document.getElementById('exportLink');
+const copyJSONBtn = document.getElementById('copyJSON');
+const importArea = document.getElementById('importArea');
+const importBtn = document.getElementById('importBtn');
+const clearLocalBtn = document.getElementById('clearLocal');
+const pasteBtn = document.getElementById('pasteBtn');
+
+/* ========= UTILS ========= */
+function saveAll(){
+  localStorage.setItem('tg_coins', STATE.coins);
+  localStorage.setItem('tg_tapPower', STATE.tapPower);
+  localStorage.setItem('tg_passiveRate', STATE.passiveRate);
+  localStorage.setItem('tg_priceTap', STATE.priceTap);
+  localStorage.setItem('tg_pricePassive', STATE.pricePassive);
+  localStorage.setItem('tg_localTop', JSON.stringify(STATE.localTop));
+}
+
+function toast(msg, time=1200){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerText = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), time);
+}
+
+/* format price display */
+function fmt(n){ return Math.round(n); }
+
+/* ========= RENDER ========= */
+function render(){
+  circle.textContent = STATE.coins.toFixed(1) + ' ₽';
+  priceTapSpan.textContent = fmt(STATE.priceTap);
+  pricePassiveSpan.textContent = fmt(STATE.pricePassive);
+  renderLocalTop();
+}
+
+function renderLocalTop(){
+  // update or add current player
+  const idx = STATE.localTop.findIndex(p=>p.name === playerName);
+  if(idx >= 0) STATE.localTop[idx].coins = STATE.coins;
+  else STATE.localTop.push({ name: playerName, coins: STATE.coins });
+
+  // sort desc and slice
+  STATE.localTop.sort((a,b)=>parseFloat(b.coins) - parseFloat(a.coins));
+  STATE.localTop = STATE.localTop.slice(0, 50);
+  saveAll();
+
+  // render top 10
+  localTopDiv.innerHTML = '';
+  STATE.localTop.slice(0,10).forEach((p,i)=>{
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    const div = document.createElement('div');
+    div.className = 'top-item';
+    div.innerHTML = `<div style="width:28px">${medal}</div><div style="flex:1;text-align:left">${p.name}</div><div><strong>${parseFloat(p.coins).toFixed(1)} ₽</strong></div>`;
+    localTopDiv.appendChild(div);
+  });
+}
+
+/* ========= TAP / INPUT HANDLING ========= */
+/* Prevent duplicate triggers from pointer/touch/click by debouncing briefly */
+let lastInputAt = 0;
+function handleTapEvent(ev){
+  ev.preventDefault && ev.preventDefault();
+  const now = Date.now();
+  if(now - lastInputAt < 40) return; // ignore duplicates in 40ms window
+  lastInputAt = now;
+
+  // get coordinates for popup
+  let x = ev.clientX, y = ev.clientY;
+  if(!x && ev.touches && ev.touches[0]){ x = ev.touches[0].clientX; y = ev.touches[0].clientY; }
+  if(!x) { x = window.innerWidth/2; y = window.innerHeight/2; }
+
+  doTap(x,y);
+}
+
+function doTap(x,y){
+  const gained = STATE.tapPower;
+  STATE.coins += gained;
+  showCoinPop(x,y, '+' + gained.toFixed(1) + ' ₽');
+  // slight scale
+  circle.style.transform = 'scale(1.03)';
+  setTimeout(()=>circle.style.transform = 'scale(1)', 110);
+  render(); saveAll();
+}
+
+/* coin popup */
+function showCoinPop(x,y,text){
+  const el = document.createElement('div');
+  el.className = 'coinPop';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.textContent = text;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.style.transform = 'translate(-50%,-120%) scale(1.06)';
+    el.style.opacity = '0';
+  });
+  setTimeout(()=>el.remove(), 700);
+}
+
+/* Attach robust listeners */
+circle.addEventListener('pointerdown', handleTapEvent, {passive:false});
+circle.addEventListener('touchstart', handleTapEvent, {passive:false});
+circle.addEventListener('click', handleTapEvent);
+
+/* Also make buttons respond to touchstart + click without doubling */
+function bindBtn(el, fn){
+  el.addEventListener('click', (e)=>{ e.preventDefault(); fn(e); });
+  el.addEventListener('touchstart', (e)=>{ e.preventDefault(); fn(e); }, {passive:false});
+}
+
+/* ========= SHOP ========= */
+function showNotEnough(){
+  shopMsg.textContent = 'Не хватает ₽';
+  setTimeout(()=>{ if(shopMsg.textContent === 'Не хватает ₽') shopMsg.textContent = ''; }, 1200);
+}
+
+bindBtn(buyTapBtn, ()=>{
+  if(STATE.coins < STATE.priceTap) return showNotEnough();
+  STATE.coins -= STATE.priceTap;
+  STATE.tapPower += 1;
+  STATE.priceTap *= 1.2;
+  render(); saveAll();
+});
+
+bindBtn(buyPassiveBtn, ()=>{
+  if(STATE.coins < STATE.pricePassive) return showNotEnough();
+  STATE.coins -= STATE.pricePassive;
+  STATE.passiveRate += 0.5;
+  STATE.pricePassive *= 1.2;
+  render(); saveAll();
+});
+
+/* passive income (per second) */
+setInterval(()=>{
+  if(STATE.passiveRate > 0){
+    STATE.coins += STATE.passiveRate / 60;
+    render(); saveAll();
+  }
+}, 1000);
+
+/* ========= TABS ========= */
+function showTab(tab){
+  tabGame.classList.toggle('active', tab==='game');
+  tabShop.classList.toggle('active', tab==='shop');
+  tabExport.classList.toggle('active', tab==='export');
+  gameCard.style.display = (tab==='game') ? 'block' : 'none';
+  shopCard.style.display = (tab==='shop') ? 'block' : 'none';
+  exportCard.style.display = (tab==='export') ? 'block' : 'none';
+}
+tabGame.addEventListener('click', ()=>showTab('game'));
+tabShop.addEventListener('click', ()=>showTab('shop'));
+tabExport.addEventListener('click', ()=>showTab('export'));
+
+/* ========= EXPORT / IMPORT ========= */
+/* create a shareable link with base64 payload in hash */
+bindBtn(exportLinkBtn, async ()=>{
+  const payload = JSON.stringify(STATE.localTop);
+  const b = btoa(encodeURIComponent(payload));
+  const link = location.origin + location.pathname + '#export=' + b;
+  try{
+    await navigator.clipboard.writeText(link);
+    toast('Ссылка скопирована');
+  }catch(e){
+    importArea.value = link;
+    toast('Ссылка вставлена в поле');
+  }
+});
+
+bindBtn(copyJSONBtn, async ()=>{
+  const payload = JSON.stringify(STATE.localTop);
+  try{ await navigator.clipboard.writeText(payload); toast('JSON скопирован'); }
+  catch(e){ importArea.value = payload; toast('JSON вставлен в поле'); }
+});
+
+bindBtn(pasteBtn, async ()=>{
+  try{
+    const txt = await navigator.clipboard.readText();
+    importArea.value = txt;
+    toast('Вставлено из буфера');
+  }catch(e){
+    toast('Буфер недоступен');
+  }
+});
+
+bindBtn(importBtn, ()=>{
+  const raw = (importArea.value || '').trim();
+  if(!raw) return toast('Вставь ссылку или JSON');
+  let data = raw;
+  const idx = raw.indexOf('#export=');
+  if(idx >= 0) data = raw.slice(idx + 8);
+  try{
+    const arr = JSON.parse(decodeURIComponent(atob(data)));
+    if(!Array.isArray(arr)) throw new Error('format');
+    // merge by name: keep max score
+    const map = {};
+    STATE.localTop.forEach(p => map[p.name] = Math.max(map[p.name]||0, parseFloat(p.coins)||0));
+    arr.forEach(p => { if(p && p.name) map[p.name] = Math.max(map[p.name]||0, parseFloat(p.coins)||0); });
+    STATE.localTop = Object.keys(map).map(k => ({ name: k, coins: map[k] })).sort((a,b)=>b.coins - a.coins);
+    saveAll(); render(); toast('Импортирован и объединён');
+  }catch(e){
+    toast('Ошибка формата');
+  }
+});
+
+clearLocalBtn.addEventListener('click', ()=>{
+  if(confirm('Очистить локальный рейтинг?')){ STATE.localTop = []; saveAll(); render(); toast('Очистил'); }
+});
+
+/* ========= INIT ========= */
+render();
+
+/* prevent iOS double-tap zoom quirks: touchstart listener and meta viewport (already set) */
+document.addEventListener('touchstart', function(){}, {passive:true});
+document.addEventListener('gesturestart', function(e){ e.preventDefault && e.preventDefault(); });
+
+/* Accessibility: allow keyboard "tap" (Enter/Space) on circle */
+circle.setAttribute('tabindex','0');
+circle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); handleTapEvent(e); } });
+
+</script>
+</body>
+</html>
