@@ -1,485 +1,285 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>TapKi — Мульти-трекер</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>TapKi Ultimate</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="icon.png">
+    <style>
+        :root {
+            --blue: #007AFF; --green: #34C759; --orange: #FF9500; --red: #FF3B30;
+            --bg: #F2F2F7; --card: #FFFFFF; --text: #000000; --gray: #8E8E93;
+            --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #000000; --card: #1C1C1E; --text: #FFFFFF; }
+        }
 
-<style>
-:root{
-  --bg:#f7f9fb;
-  --card:#ffffff;
-  --muted:#7b8090;
-  --accent:#1f8cff;
-  --accent2:#2dd4bf;
-  --ok:#2ecc71;
-  font-family: Inter, system-ui, -apple-system, "Helvetica Neue", Arial;
-  color-scheme: light;
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;touch-action:manipulation}
-.app{max-width:980px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 16px 96px;padding-bottom:calc(env(safe-area-inset-bottom) + 96px);}
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 
-/* header adjusted down (safe area taken) */
-header.app-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding-top:6px}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:46px;height:46px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(16,24,40,0.06)}
-.logo img{width:100%;height:100%;object-fit:cover}
-.title{font-weight:700;font-size:16px}
-.subtitle{font-size:12px;color:var(--muted)}
+        /* INTRO */
+        #splash { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; transition: opacity 1s; }
+        .splash-logo { font-size: 52px; font-weight: 800; letter-spacing: -2px; opacity: 0; transform: translateY(20px); animation: emerge 1.2s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes emerge { to { opacity: 1; transform: translateY(0); } }
 
-/* simple card */
-.card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 8px 30px rgba(16,24,40,0.04)}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{border:0;padding:10px 14px;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;min-height:44px}
-.btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(31,140,255,0.12)}
-.icon-btn{background:transparent;border:0;padding:8px;border-radius:12px;cursor:pointer;min-height:44px}
-.small{font-size:13px;color:var(--muted)}
-.input{padding:10px 12px;border-radius:10px;border:1px solid #e7eefb;min-width:120px;background:#fff;min-height:44px}
-.flex-1{flex:1}
+        /* APP LAYOUT */
+        #app { display: none; flex-direction: column; height: 100%; opacity: 0; transition: 1s; }
+        header { padding: calc(var(--safe-top) + 20px) 20px 10px; background: var(--card); border-bottom: 0.5px solid rgba(0,0,0,0.1); }
+        main { flex: 1; overflow-y: auto; padding: 15px 15px 120px; }
+        .view { display: none; }
+        .view.active { display: block; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* HOME grid (3 squares) */
-.home-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.home-card{background:var(--card);border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:120px;cursor:pointer;box-shadow:0 10px 30px rgba(16,24,40,0.04)}
-.home-card.center{align-items:center;text-align:center}
-.home-value{font-size:26px;font-weight:800;color:#111}
-.home-label{font-size:13px;color:var(--muted);margin-top:6px}
-.home-date{font-size:20px;font-weight:700;color:var(--accent)}
+        .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .ios-input { width: 100%; background: var(--bg); border: none; padding: 14px; border-radius: 12px; font-size: 16px; color: var(--text); margin-bottom: 10px; }
+        .btn { background: var(--blue); color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-weight: 600; }
 
-/* workouts categories */
-.categories{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.cat-btn{padding:10px 14px;border-radius:12px;border:1px solid #eef6ff;background:#fff;cursor:pointer;min-height:44px;font-weight:700;color:var(--muted)}
-.cat-btn.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:0;box-shadow:0 8px 30px rgba(31,140,255,0.08)}
+        /* TASKS */
+        .task-item { display: flex; align-items: center; padding: 14px 0; border-bottom: 0.5px solid rgba(142,142,147,0.2); }
+        .cb { width: 26px; height: 26px; border: 2px solid var(--blue); border-radius: 50%; margin-right: 12px; position: relative; }
+        .task-item.done .cb { background: var(--blue); }
+        .task-item.done .cb::after { content: "✓"; color: white; position: absolute; left: 5px; top: 1px; }
+        .task-item.done span { text-decoration: line-through; color: var(--gray); }
+        .task-tag { font-size: 10px; color: var(--blue); margin-left: auto; text-transform: uppercase; font-weight: 700; }
 
-/* exercise list */
-.exercise-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-.ex-item{display:flex;justify-content:space-between;gap:8px;padding:10px;border-radius:10px;background:#fff;border:1px solid #f1f4f9}
+        /* WEIGHT & BMI */
+        .bmi-bar { height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--green), var(--orange), var(--red)); margin: 15px 0; position: relative; }
+        .bmi-dot { position: absolute; top: -4px; width: 4px; height: 16px; background: var(--text); border-radius: 2px; transition: 0.5s; }
 
-/* timeline */
-.timeline{display:flex;flex-direction:column;gap:8px}
-.event{background:#fff;padding:10px;border-radius:10px;border:1px solid #f1f4f9;display:flex;gap:8px;align-items:flex-start}
-.event .time{font-size:12px;color:var(--muted);min-width:90px}
+        /* WORKOUT */
+        .ex-header { display: flex; justify-content: space-between; align-items: center; }
+        .hist { display: none; margin-top: 10px; padding-top: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); font-size: 13px; color: var(--gray); }
+        .hist.open { display: block; }
 
-/* bottom nav */
-.navbar{position:fixed;left:8px;right:8px;bottom:10px;display:flex;justify-content:center;padding:6px;pointer-events:auto;z-index:999}
-.nav-inner{background:rgba(255,255,255,0.96);backdrop-filter:blur(8px);border-radius:18px;padding:8px 12px;display:flex;gap:6px;box-shadow:0 14px 40px rgba(16,24,40,0.08);padding-bottom:calc(env(safe-area-inset-bottom) + 10px)}
-.tab{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;border-radius:12px;cursor:pointer;color:var(--muted);font-size:13px;min-width:56px}
-.tab.active{background:linear-gradient(180deg, rgba(31,140,255,0.08), rgba(45,212,191,0.03));color:var(--accent);box-shadow:0 6px 18px rgba(31,140,255,0.08)}
-.section{display:none}
-.section.active{display:block}
-
-/* smaller screens */
-@media (max-width:560px){
-  .home-grid{grid-template-columns:1fr;gap:12px}
-  .title{font-size:15px}
-}
-</style>
+        /* NAV */
+        nav { position: fixed; bottom: 0; width: 100%; height: calc(var(--safe-bottom) + 65px); background: rgba(var(--card-rgb), 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding-top: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); }
+        .nav-btn { background: none; border: none; color: var(--gray); display: flex; flex-direction: column; align-items: center; font-size: 10px; }
+        .nav-btn.active { color: var(--blue); }
+        .nav-btn i { font-size: 24px; margin-bottom: 4px; font-style: normal; }
+    </style>
 </head>
 <body>
 
-<!-- SPLASH -->
-<div id="splash" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:9999;background:#fff">
-  <div id="splashCard" style="width:140px;height:140px;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 20px 60px rgba(16,24,40,0.08)">
-    <svg id="splashDefault" viewBox="0 0 64 64" width="64" height="64"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#1f8cff"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs><rect rx="12" width="64" height="64" fill="url(#g)"/><g transform="translate(14,18)" fill="#fff"><rect x="0" y="0" width="8" height="24"/><circle cx="28" cy="8" r="8"/></g></svg>
-  </div>
-  <div style="margin-top:14px;font-weight:800;font-size:18px">TapKi</div>
-</div>
-
-<div class="app" id="app" style="display:none">
-  <header class="app-header">
-    <div class="brand">
-      <div class="logo" id="logoSmall"><svg viewBox="0 0 64 64" width="32" height="32"><defs><linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#1f8cff"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs><rect rx="10" width="64" height="64" fill="url(#g2)"/><g transform="translate(12,16)" fill="#fff"><rect x="0" y="0" width="8" height="24"/><circle cx="28" cy="8" r="8"/></g></svg></div>
-      <div>
-        <div class="title">TapKi</div>
-        <div class="subtitle" id="subtitle">Минималистичный трекер</div>
-      </div>
+    <div id="splash">
+        <div class="splash-logo">TapKi</div>
     </div>
-    <div class="row">
-      <input id="logoFile" type="file" accept="image/*" style="display:none">
-      <button class="icon-btn" id="btnLogo" title="Загрузить лого">🖼️</button>
-      <button class="icon-btn" id="btnExport" title="Экспорт">⬇️</button>
-      <button class="icon-btn" id="btnReset" title="Сброс">♻️</button>
+
+    <div id="app">
+        <header>
+            <div id="h-date" style="font-size: 12px; color: var(--gray); font-weight: 600;"></div>
+            <h1 style="margin: 5px 0 0 0;">Мой день</h1>
+        </header>
+
+        <main>
+            <section id="tab-tasks" class="view active">
+                <div class="card">
+                    <input type="text" id="t-in" class="ios-input" placeholder="Новая задача">
+                    <select id="t-rep" class="ios-input">
+                        <option value="once">Один раз</option>
+                        <option value="daily">Ежедневно</option>
+                        <option value="weekly">Еженедельно</option>
+                    </select>
+                    <button class="btn" onclick="addTask()">Добавить</button>
+                </div>
+                <div class="card" id="t-list"></div>
+            </section>
+
+            <section id="tab-weight" class="view">
+                <div class="card"><canvas id="wChart" style="height:160px;"></canvas></div>
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                        <h3>ИМТ: <span id="bmi-num">--</span></h3>
+                        <span id="bmi-txt" style="font-size:14px; color:var(--gray)"></span>
+                    </div>
+                    <div class="bmi-bar"><div class="bmi-dot" id="bmi-dot"></div></div>
+                </div>
+                <div class="card">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <input type="number" id="u-h" class="ios-input" placeholder="Рост (см)" onchange="updProfile()">
+                        <input type="number" id="u-a" class="ios-input" placeholder="Возраст" onchange="updProfile()">
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" step="0.1" id="w-in" class="ios-input" placeholder="Вес сегодня (кг)">
+                        <button class="btn" style="width:80px" onclick="addW()">Ок</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-workout" class="view">
+                <div class="card">
+                    <input type="text" id="ex-in" class="ios-input" placeholder="Название (жим, присед...)">
+                    <button class="btn" onclick="addEx()">Создать</button>
+                </div>
+                <div id="ex-list"></div>
+            </section>
+        </main>
+
+        <nav>
+            <button class="nav-btn active" onclick="swTab('tasks', this)"><i>📋</i>План</button>
+            <button class="nav-btn" onclick="swTab('weight', this)"><i>⚖️</i>Вес</button>
+            <button class="nav-btn" onclick="swTab('workout', this)"><i>💪</i>Зал</button>
+        </nav>
     </div>
-  </header>
 
-  <main>
-    <!-- HOME -->
-    <section id="home" class="section active">
-      <div class="home-grid">
-        <div class="home-card" id="card-last-weight" role="button" aria-label="Последний вес">
-          <div class="home-value" id="home-weight">—</div>
-          <div class="home-label">Последний вес</div>
-        </div>
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTick() {
+            const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            o.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(); o.stop(audioCtx.currentTime + 0.1);
+        }
 
-        <div class="home-card" id="card-tasks" role="button" aria-label="Задачи">
-          <div class="home-value" id="home-tasks">—</div>
-          <div class="home-label">Невыполненных задач</div>
-        </div>
+        let db = {
+            tasks: JSON.parse(localStorage.getItem('tap_tasks')) || [],
+            weight: JSON.parse(localStorage.getItem('tap_weight')) || [],
+            profile: JSON.parse(localStorage.getItem('tap_prof')) || { h: 180, a: 25 },
+            workout: JSON.parse(localStorage.getItem('tap_work')) || [],
+            last: localStorage.getItem('tap_last') || ""
+        };
 
-        <div class="home-card center" style="grid-column:span 2" id="card-date">
-          <div class="home-date" id="home-date">—</div>
-          <div class="home-label">Сегодня</div>
-        </div>
-      </div>
-    </section>
+        const save = () => {
+            localStorage.setItem('tap_tasks', JSON.stringify(db.tasks));
+            localStorage.setItem('tap_weight', JSON.stringify(db.weight));
+            localStorage.setItem('tap_prof', JSON.stringify(db.profile));
+            localStorage.setItem('tap_work', JSON.stringify(db.workout));
+            localStorage.setItem('tap_last', db.last);
+        };
 
-    <!-- WORKOUTS -->
-    <section id="workouts" class="section">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">Тренировки</div>
-          <div class="small">Категории</div>
-        </div>
+        setTimeout(() => {
+            document.getElementById('splash').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('splash').style.display = 'none';
+                document.getElementById('app').style.display = 'flex';
+                setTimeout(() => document.getElementById('app').style.opacity = '1', 50);
+                init();
+            }, 1000);
+        }, 3000);
 
-        <div class="categories" id="cats">
-          <!-- buttons added by JS -->
-        </div>
+        function init() {
+            const today = new Date().toDateString();
+            if(db.last !== today) {
+                db.tasks = db.tasks.filter(t => t.rep !== 'once' || !t.done);
+                db.tasks.forEach(t => { if(t.rep !== 'once') t.done = false; });
+                db.last = today; save();
+            }
+            document.getElementById('h-date').innerText = new Date().toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'short'});
+            renderTasks(); renderProf(); renderEx(); initChart();
+        }
 
-        <div class="card" style="padding:12px">
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="exReps" class="input" placeholder="Повторы (например 12)">
-            <input id="exSets" class="input" placeholder="Подходы (например 3)">
-            <input id="exWeight" class="input" placeholder="Вес (кг)" style="width:110px">
-            <button class="btn" id="addExercise">Добавить</button>
-          </div>
-          <div class="exercise-list" id="exerciseList"></div>
-        </div>
-      </div>
-    </section>
+        function swTab(id, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('tab-'+id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
+            if(window.navigator.vibrate) window.navigator.vibrate(5);
+        }
 
-    <!-- WEIGHT -->
-    <section id="weight" class="section">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">Вес & ИМТ</div>
-          <div class="small" id="bmiText">—</div>
-        </div>
+        function addTask() {
+            const txt = document.getElementById('t-in').value;
+            const rep = document.getElementById('t-rep').value;
+            if(!txt) return;
+            db.tasks.push({id: Date.now(), txt, rep, done: false});
+            document.getElementById('t-in').value = '';
+            save(); renderTasks();
+        }
 
-        <div style="height:10px"></div>
+        function toggleTask(id) {
+            const t = db.tasks.find(x => x.id === id);
+            t.done = !t.done;
+            if(t.done) { playTick(); if(window.navigator.vibrate) window.navigator.vibrate([15, 10, 15]); }
+            save(); renderTasks();
+        }
 
-        <div class="row">
-          <input id="inputWeight" class="input" placeholder="Вес, кг" type="number" step="0.1">
-          <input id="inputHeight" class="input" placeholder="Рост, см" type="number" step="0.1">
-          <button class="btn" id="addWeight">Сохранить</button>
-          <button class="btn ghost" id="clearWeights">Очистить</button>
-        </div>
+        function renderTasks() {
+            const l = document.getElementById('t-list');
+            l.innerHTML = db.tasks.map(t => `
+                <div class="task-item ${t.done ? 'done' : ''}" onclick="toggleTask(${t.id})">
+                    <div class="cb"></div><span>${t.txt}</span>
+                    <div class="task-tag">${t.rep === 'daily' ? 'День' : (t.rep === 'weekly' ? 'Неделя' : '')}</div>
+                </div>
+            `).join('') || '<div style="text-align:center; color:var(--gray)">План пуст</div>';
+        }
 
-        <div style="height:12px"></div>
-        <div class="card weight-chart" id="weightChart">
-          <svg class="sparkline" id="weightSpark" viewBox="0 0 400 120" preserveAspectRatio="none"></svg>
-        </div>
+        function updProfile() {
+            db.profile.h = document.getElementById('u-h').value;
+            db.profile.a = document.getElementById('u-a').value;
+            save(); renderProf();
+        }
 
-        <div style="height:10px"></div>
-        <table class="table" style="width:100%;border-collapse:collapse">
-          <thead><tr><th style="text-align:left;color:var(--muted);padding:6px 0">Дата</th><th style="text-align:left;padding:6px 0">Вес</th><th style="text-align:left;padding:6px 0">ИМТ</th><th></th></tr></thead>
-          <tbody id="weightsTable"></tbody>
-        </table>
-      </div>
-    </section>
+        function addW() {
+            const v = parseFloat(document.getElementById('w-in').value);
+            if(!v) return;
+            db.weight.push({d: new Date().toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit'}), v});
+            if(db.weight.length > 15) db.weight.shift();
+            document.getElementById('w-in').value = '';
+            save(); renderProf(); updChart();
+        }
 
-    <!-- TASKS -->
-    <section id="tasks" class="section">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">Задачи</div>
-          <div class="small">Фильтр</div>
-        </div>
+        function renderProf() {
+            document.getElementById('u-h').value = db.profile.h;
+            document.getElementById('u-a').value = db.profile.a;
+            if(db.weight.length > 0) {
+                const w = db.weight[db.weight.length-1].v;
+                const bmi = (w / ((db.profile.h/100)**2)).toFixed(1);
+                document.getElementById('bmi-num').innerText = bmi;
+                let s = "Норма", p = 40;
+                if(bmi < 18.5) { s = "Дефицит"; p = 15; }
+                else if(bmi > 25) { s = "Избыток"; p = 75; }
+                document.getElementById('bmi-txt').innerText = s;
+                document.getElementById('bmi-dot').style.left = p + '%';
+            }
+        }
 
-        <div style="height:10px"></div>
+        let chart;
+        function initChart() {
+            const ctx = document.getElementById('wChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: db.weight.map(x=>x.d), datasets: [{ data: db.weight.map(x=>x.v), borderColor: '#007AFF', tension: 0.4, fill: false }] },
+                options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+            });
+        }
+        function updChart() { chart.data.labels = db.weight.map(x=>x.d); chart.data.datasets[0].data = db.weight.map(x=>x.v); chart.update(); }
 
-        <div class="row">
-          <input id="taskTitle" class="input flex-1" placeholder="Новая задача">
-          <input id="taskDue" class="input" type="date">
-          <button class="btn" id="addTask">Добавить</button>
-        </div>
+        function addEx() {
+            const n = document.getElementById('ex-in').value;
+            if(!n) return;
+            db.workout.push({id: Date.now(), n, hist: []});
+            document.getElementById('ex-in').value = '';
+            save(); renderEx();
+        }
 
-        <div style="height:12px"></div>
-        <div id="taskList"></div>
-      </div>
-    </section>
+        function addSet(id) {
+            const ex = db.workout.find(x => x.id === id);
+            const isJ = ex.n.toLowerCase().includes('жим');
+            let w = isJ ? prompt("Вес (кг):") : 0;
+            let r = prompt("Повторы:");
+            if(r) { ex.hist.unshift({d: new Date().toLocaleDateString(), w, r}); save(); renderEx(); }
+        }
 
-    <!-- HISTORY (последняя) -->
-    <section id="history" class="section">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">История</div>
-          <div class="small">Экспорт / Импорт</div>
-        </div>
-        <div style="height:10px"></div>
-        <div class="timeline" id="timeline"></div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- bottom nav -->
-  <div class="navbar" role="navigation" aria-label="Навигация">
-    <div class="nav-inner" id="navInner">
-      <div class="tab active" data-tab="home">🏠<div>Главная</div></div>
-      <div class="tab" data-tab="workouts">🏋️<div>Трен</div></div>
-      <div class="tab" data-tab="weight">⚖️<div>Вес</div></div>
-      <div class="tab" data-tab="tasks">✅<div>Задачи</div></div>
-      <div class="tab" data-tab="history">📜<div>История</div></div>
-    </div>
-  </div>
-
-  <input type="file" id="importFile" accept="application/json" style="display:none">
-</div>
-
-<script>
-/* ===== Storage ===== */
-const STORE_KEY = 'tapki_v3';
-let store = {
-  exercises: {},   // {category: [{id,date,reps,sets,weight}]}
-  weights: [],     // {id,date,weight,bmi}
-  tasks: [],       // {id,title,due,done,created}
-  settings: {height:170, iconData:null},
-  logs: []
-};
-const EX_CATS = ['Отжимания','Пресс','Штанга','Подтягивания'];
-
-function load(){ try{ const s = localStorage.getItem(STORE_KEY); if(s) store = JSON.parse(s); }catch(e){console.error(e)} }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(store)); renderAll(); }
-function uid(pref='id'){ return pref + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-function now(){ return Date.now(); }
-function fmtDate(ts){ const d = new Date(ts); return d.toLocaleString('ru-RU',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-function dateOnly(ts){ const d = new Date(ts); return d.toISOString().slice(0,10); }
-function addLog(type,text,meta){ store.logs.unshift({id:uid('log'), t:now(), type, text, meta}); if(store.logs.length>400) store.logs.pop(); save(); }
-
-/* ===== Splash & logo ===== */
-const splash = document.getElementById('splash');
-const app = document.getElementById('app');
-const logoFile = document.getElementById('logoFile');
-const btnLogo = document.getElementById('btnLogo');
-const logoSmall = document.getElementById('logoSmall');
-const splashCard = document.getElementById('splashCard');
-
-btnLogo.addEventListener('click', ()=> logoFile.click());
-logoFile.addEventListener('change', (e)=>{ const f = e.target.files && e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ store.settings.iconData = r.result; save(); applyLogo(r.result); }; r.readAsDataURL(f); });
-function applyLogo(dataUrl){ logoSmall.innerHTML=''; splashCard.innerHTML=''; const i=document.createElement('img'); i.src=dataUrl; i.style.width='100%'; i.style.height='100%'; i.style.objectFit='cover'; logoSmall.appendChild(i); splashCard.appendChild(i.cloneNode()); }
-
-/* ===== Navigation ===== */
-const tabs = document.querySelectorAll('.tab');
-tabs.forEach(t=>t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(t.dataset.tab).classList.add('active'); }));
-
-/* Prevent double-tap zoom and double click behavior */
-(function preventDoubleTap(){
-  let lastTouch = 0;
-  document.addEventListener('touchend', function(e){
-    const nowT = Date.now();
-    if(nowT - lastTouch <= 300){
-      e.preventDefault();
-    }
-    lastTouch = nowT;
-  }, {passive:false});
-  document.addEventListener('dblclick', e=>e.preventDefault());
-})();
-
-/* ===== Home render ===== */
-function renderHome(){
-  // last weight
-  const last = store.weights[0];
-  document.getElementById('home-weight').textContent = last ? (last.weight + ' кг') : '—';
-  // tasks unfinished
-  const undone = store.tasks.filter(t=>!t.done).length;
-  document.getElementById('home-tasks').textContent = undone;
-  // date
-  const d = new Date();
-  const opts = {weekday:'long', day:'numeric', month:'long'};
-  document.getElementById('home-date').textContent = d.toLocaleString('ru-RU', opts);
-}
-
-/* Home cards click -> navigate */
-document.getElementById('card-last-weight').addEventListener('click', ()=> document.querySelector('.tab[data-tab="weight"]').click());
-document.getElementById('card-tasks').addEventListener('click', ()=> document.querySelector('.tab[data-tab="tasks"]').click());
-document.getElementById('card-date').addEventListener('click', ()=> alert(new Date().toLocaleString()));
-
-/* ===== Workouts (categories + entries) ===== */
-const catsWrap = document.getElementById('cats');
-const exerciseList = document.getElementById('exerciseList');
-let activeCat = EX_CATS[0];
-
-function initCats(){
-  catsWrap.innerHTML='';
-  EX_CATS.forEach(c=>{
-    const b = document.createElement('button'); b.className='cat-btn'; b.textContent = c;
-    if(c===activeCat) b.classList.add('active');
-    b.addEventListener('click', ()=>{ activeCat = c; renderCats(); });
-    catsWrap.appendChild(b);
-  });
-}
-function renderCats(){
-  // highlight
-  catsWrap.querySelectorAll('button').forEach(b=> b.classList.toggle('active', b.textContent===activeCat));
-  // list
-  exerciseList.innerHTML='';
-  const arr = store.exercises[activeCat] || [];
-  if(arr.length===0) exerciseList.innerHTML = '<div class="small">Нет записей</div>';
-  arr.forEach(item=>{
-    const div = document.createElement('div'); div.className='ex-item';
-    div.innerHTML = `<div><div style="font-weight:700">${item.reps}×${item.sets}${item.weight?(' • '+item.weight+'кг'):''}</div><div class="small">${fmtDate(item.date)}</div></div><div><button class="btn ghost" data-id="${item.id}">Удалить</button></div>`;
-    exerciseList.appendChild(div);
-  });
-  exerciseList.querySelectorAll('button').forEach(b=>b.addEventListener('click', e=>{ const id=e.target.dataset.id; store.exercises[activeCat]=store.exercises[activeCat].filter(x=>x.id!==id); addLog('ex_del','Удалено упражнение '+activeCat,{id,cat:activeCat}); save(); }));
-}
-document.getElementById('addExercise').addEventListener('click', ()=>{
-  const reps = document.getElementById('exReps').value.trim();
-  const sets = document.getElementById('exSets').value.trim();
-  const weight = document.getElementById('exWeight').value.trim();
-  if(!reps || !sets) return alert('Повторы и подходы');
-  const item = {id:uid('ex'), date:now(), reps, sets, weight: weight ? Number(weight) : null};
-  store.exercises[activeCat] = store.exercises[activeCat] || [];
-  store.exercises[activeCat].unshift(item);
-  addLog('ex_add', `Добавлено ${activeCat} ${reps}x${sets}${weight?(' '+weight+'кг'):''}`, {cat:activeCat, item});
-  document.getElementById('exReps').value=''; document.getElementById('exSets').value=''; document.getElementById('exWeight').value='';
-  save();
-});
-
-/* ===== Weight ===== */
-const weightsTable = document.getElementById('weightsTable');
-document.getElementById('addWeight').addEventListener('click', ()=>{
-  const w = Number(document.getElementById('inputWeight').value);
-  const h = Number(document.getElementById('inputHeight').value) || Number(store.settings.height) || 170;
-  if(!w || !h) return alert('Вес и рост');
-  const bmi = Math.round((w / ((h/100)*(h/100))) * 10) / 10;
-  const item = {id:uid('wt'), date:now(), weight: w, bmi};
-  store.weights.unshift(item);
-  store.settings.height = h;
-  addLog('weight', `Вес ${w} кг`, item);
-  document.getElementById('inputWeight').value='';
-  save();
-});
-document.getElementById('clearWeights').addEventListener('click', ()=>{ if(confirm('Очистить веса?')){ store.weights=[]; addLog('weight_clear','Очистка весов'); save(); } });
-
-function renderWeights(){
-  weightsTable.innerHTML='';
-  if(store.weights.length===0) weightsTable.innerHTML='<tr><td colspan="4" class="small">Нет записей</td></tr>';
-  store.weights.forEach(w=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="padding:8px 0">${fmtDate(w.date)}</td><td style="padding:8px 0">${w.weight} кг</td><td style="padding:8px 0">${w.bmi}</td><td style="padding:8px 0"><button class="btn ghost" data-id="${w.id}">Удалить</button></td>`;
-    weightsTable.appendChild(tr);
-  });
-  weightsTable.querySelectorAll('button').forEach(b=>b.addEventListener('click', (e)=>{ const id=e.target.dataset.id; store.weights = store.weights.filter(x=>x.id!==id); addLog('weight_del','Удалён вес',{id}); save(); }));
-  renderWeightChart();
-}
-function renderWeightChart(){
-  const svg = document.getElementById('weightSpark'); svg.innerHTML='';
-  const data = store.weights.slice(0,30).reverse();
-  if(data.length<2){ svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa4b2">Нет данных</text>`; return; }
-  const w = 400, h = 120, pad=10;
-  const vals = data.map(d=>d.weight); const min = Math.min(...vals), max = Math.max(...vals);
-  const scaleX = (i)=> pad + (i/(data.length-1))*(w-2*pad);
-  const scaleY = (v)=> h - pad - ((v - min)/(max-min || 1))*(h-2*pad);
-  const path = data.map((d,i)=>`${i===0?'M':'L'} ${scaleX(i)} ${scaleY(d.weight)}`).join(' ');
-  const poly = document.createElementNS('http://www.w3.org/2000/svg','path');
-  poly.setAttribute('d', path); poly.setAttribute('fill','none'); poly.setAttribute('stroke','url(#gline)'); poly.setAttribute('stroke-width','2.2');
-  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs'); defs.innerHTML = `<linearGradient id="gline" x1="0" x2="1"><stop offset="0" stop-color="#1f8cff"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient>`;
-  svg.appendChild(defs); svg.appendChild(poly);
-}
-
-/* ===== Tasks ===== */
-const taskList = document.getElementById('taskList');
-document.getElementById('addTask').addEventListener('click', ()=>{
-  const t = document.getElementById('taskTitle').value.trim();
-  const due = document.getElementById('taskDue').value || null;
-  if(!t) return;
-  const item = {id:uid('t'), title:t, due, done:false, created:now()};
-  store.tasks.unshift(item);
-  addLog('task','Новая задача: '+t, item);
-  document.getElementById('taskTitle').value=''; document.getElementById('taskDue').value='';
-  save();
-});
-function renderTasks(){
-  taskList.innerHTML='';
-  let list = store.tasks.slice();
-  if(list.length===0) taskList.innerHTML='<div class="small">Нет задач</div>';
-  list.forEach(t=>{
-    const div = document.createElement('div'); div.className='task';
-    const cb = document.createElement('div'); cb.className='checkbox'; cb.innerHTML = t.done ? '✓' : '';
-    cb.addEventListener('click', ()=>{ t.done=!t.done; addLog('task_done', t.done ? 'Выполнена: '+t.title : 'Отменено: '+t.title, t); save(); });
-    const info = document.createElement('div'); info.className='title';
-    info.innerHTML = `<div style="font-weight:700">${t.title}</div><div class="small">${t.due?('До '+t.due):''}</div>`;
-    const actions = document.createElement('div'); actions.innerHTML = `<button class="btn ghost" data-id="${t.id}">Удалить</button>`;
-    div.appendChild(cb); div.appendChild(info); div.appendChild(actions);
-    taskList.appendChild(div);
-  });
-  taskList.querySelectorAll('button').forEach(b=>b.addEventListener('click', (e)=>{ const id=e.target.dataset.id; store.tasks = store.tasks.filter(x=>x.id!==id); addLog('task_del','Удалена задача',{id}); save(); }));
-}
-
-/* ===== History ===== */
-function renderTimeline(){
-  const timeline = document.getElementById('timeline'); timeline.innerHTML='';
-  if(store.logs.length===0) timeline.innerHTML='<div class="small">Нет действий</div>';
-  store.logs.slice(0,200).forEach(e=>{
-    const ev = document.createElement('div'); ev.className='event';
-    ev.innerHTML = `<div class="time">${new Date(e.t).toLocaleString()}</div><div style="flex:1"><div style="font-weight:700">${e.type}</div><div class="small">${e.text}</div></div>`;
-    timeline.appendChild(ev);
-  });
-}
-
-/* ===== Export/Import/Reset ===== */
-document.getElementById('btnExport').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(store)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download = `tapki-backup-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-});
-document.getElementById('btnReset').addEventListener('click', ()=>{ if(confirm('Полный сброс?')){ localStorage.removeItem(STORE_KEY); location.reload(); } });
-document.getElementById('importFile').addEventListener('change', (e)=>{ const f = e.target.files && e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ const obj = JSON.parse(r.result); if(confirm('Импортировать и перезаписать данные?')){ store = obj; save(); alert('Импортировано'); } }catch(err){ alert('Ошибка файла'); } }; r.readAsText(f); });
-
-/* ===== Render all ===== */
-function renderAll(){
-  renderHome();
-  initCats();
-  renderCats();
-  renderWeights();
-  renderTasks();
-  renderTimeline();
-  document.getElementById('subtitle').textContent = `v3 • ${Object.values(store.exercises).flat().length} упражн. • ${store.tasks.filter(t=>!t.done).length} задач`;
-  if(store.settings.iconData) applyLogo(store.settings.iconData);
-}
-
-/* ===== Init ===== */
-function init(){
-  load();
-  // ensure categories structure exists
-  EX_CATS.forEach(c=> store.exercises[c] = store.exercises[c] || []);
-  renderAll();
-  // splash 3s
-  setTimeout(()=>{ splash.style.display='none'; app.style.display=''; }, 3000);
-  // register lightweight SW best-effort
-  if('serviceWorker' in navigator){
-    try{
-      const swCode = `self.addEventListener('install', e=>self.skipWaiting());self.addEventListener('fetch', e=>{ e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))); });`;
-      const blob = new Blob([swCode], {type:'application/javascript'}); const swUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl).catch(()=>{});
-    }catch(e){}
-  }
-}
-init();
-
-/* ===== Accessibility / prevent accidental zoom handled earlier ===== */
-
-/* Keyboard shortcuts are disabled while typing (kept minimal) */
-function isTypingElement(el){
-  if(!el) return false;
-  const t = el.tagName;
-  if(t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return true;
-  if(el.isContentEditable) return true;
-  return false;
-}
-document.addEventListener('keydown', (e)=>{
-  if(e.ctrlKey || e.metaKey || isTypingElement(document.activeElement)) return;
-  // minimal shortcuts: 1..5 map roughly
-  const map = {'1':'home','2':'workouts','3':'weight','4':'tasks','5':'history'};
-  if(e.key && map[e.key]){
-    const tab = document.querySelector(`.tab[data-tab="${map[e.key]}"]`);
-    if(tab) tab.click();
-  }
-});
-</script>
+        function renderEx() {
+            const l = document.getElementById('ex-list');
+            l.innerHTML = db.workout.map(e => `
+                <div class="card">
+                    <div class="ex-header">
+                        <div onclick="document.getElementById('h-${e.id}').classList.toggle('open')">
+                            <div style="font-weight:700">${e.n}</div>
+                            <div style="font-size:12px; color:var(--blue)">История ▾</div>
+                        </div>
+                        <button class="btn" style="width:50px; padding:8px" onclick="addSet(${e.id})">+</button>
+                    </div>
+                    <div class="hist" id="h-${e.id}">
+                        ${e.hist.map(h => `<div>${h.d}: ${h.w ? h.w+'кг x ' : ''}${h.r} повт.</div>`).join('') || 'Пусто'}
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
 </body>
 </html>
